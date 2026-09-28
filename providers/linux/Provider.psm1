@@ -748,9 +748,9 @@ function Get-NGAutoruns {
     #     Run key and is routinely missed because nobody diffs dotfiles.
     $profileFiles = @('/etc/profile', '/etc/bash.bashrc', '/etc/zsh/zshrc') +
         @(Get-ChildItem '/etc/profile.d' -File -Filter '*.sh' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
-    foreach ($home in (Get-ChildItem '/home' -Directory -ErrorAction SilentlyContinue)) {
+    foreach ($userDir in (Get-ChildItem '/home' -Directory -ErrorAction SilentlyContinue)) {
         foreach ($rc in '.bashrc', '.bash_profile', '.profile', '.zshrc', '.bash_login') {
-            $profileFiles += (Join-Path $home.FullName $rc)
+            $profileFiles += (Join-Path $userDir.FullName $rc)
         }
     }
     foreach ($rc in '.bashrc', '.bash_profile', '.profile', '.zshrc') {
@@ -789,8 +789,8 @@ function Get-NGAutoruns {
 
     # --- systemd user units (survive as the user, often missed)
     foreach ($base in @('/home', '/root')) {
-        foreach ($home in (Get-ChildItem $base -Directory -ErrorAction SilentlyContinue)) {
-            $userUnitDir = Join-Path $home.FullName '.config/systemd/user'
+        foreach ($userDir in (Get-ChildItem $base -Directory -ErrorAction SilentlyContinue)) {
+            $userUnitDir = Join-Path $userDir.FullName '.config/systemd/user'
             foreach ($u in (Get-ChildItem $userUnitDir -File -ErrorAction SilentlyContinue)) {
                 $txt = Get-NGFileTextSafe $u.FullName
                 $exec = ''
