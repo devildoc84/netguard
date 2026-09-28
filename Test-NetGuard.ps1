@@ -187,7 +187,15 @@ Test-Case 'platform rules reach the shared detector' {
     $all = Find-NGPostureFindings -Posture $script:posture
     $nested = @($all | Where-Object { $_ -is [array] })
     if ($nested.Count -gt 0) { throw 'a finding was added as a nested array' }
-    (@($all | Where-Object { $_.agent -like 'posture-*' }).Count) -gt 0
+    # Ask the provider directly and compare. A hardened host (such as a CI
+    # runner) can legitimately have zero platform findings, so the check is
+    # that every finding the provider returns reaches the shared detector.
+    # Assign first: the finder returns a comma-wrapped array.
+    $direct = Find-NGPlatformPostureFindings -Posture $script:posture
+    $expected = @($direct | Where-Object { $_ }).Count
+    $reached = @($all | Where-Object { $_.agent -like 'posture-*' }).Count
+    if ($reached -ne $expected) { throw "provider returned $expected platform finding(s) but $reached reached the detector" }
+    if ($expected -eq 0) { 'skip' } else { $true }
 }
 Test-Case 'listening ports collected with scope' {
     $ports = Get-NGListeningPorts
