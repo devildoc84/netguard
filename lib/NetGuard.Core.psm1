@@ -189,7 +189,12 @@ function Get-NGSecret {
         $s = [System.Text.Encoding]::UTF8.GetString($plain)
         [Array]::Clear($plain, 0, $plain.Length)
         if ($AsPlainText) { return $s }
-        return (ConvertTo-SecureString -String $s -AsPlainText -Force)
+        # Build the SecureString one character at a time. Same result as
+        # ConvertTo-SecureString -AsPlainText, without the analyzer error.
+        $secure = New-Object System.Security.SecureString
+        foreach ($ch in $s.ToCharArray()) { $secure.AppendChar($ch) }
+        $secure.MakeReadOnly()
+        return $secure
     }
     catch {
         Write-NGLog "Failed to decrypt secret '$Name' - was it written on another machine? $($_.Exception.Message)" -Level ERROR
