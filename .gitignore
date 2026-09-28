@@ -1,0 +1,57 @@
+# ---------------------------------------------------------------------------
+# SECRETS AND CREDENTIALS - never commit these.
+# NetGuard stores an encrypted secret blob plus its entropy key on disk. Both are
+# machine-scoped and useless elsewhere, but committing either would publish the
+# shape of your alerting setup and, on Linux, the key that protects it.
+# ---------------------------------------------------------------------------
+state/secrets.json
+state/.ngkey
+**/secrets.json
+**/.ngkey
+*.pem
+*.key
+*.pfx
+.env
+.env.*
+
+# Local configuration contains your webhook host, SMTP account and phone gateway.
+# The committed template is config/netguard.config.example.json.
+config/netguard.config.json
+config/hub.txt
+config/oui.json
+
+# ---------------------------------------------------------------------------
+# RUNTIME STATE - regenerated on every run, machine-specific, often large.
+# ---------------------------------------------------------------------------
+state/
+baseline/
+logs/
+reports/
+evidence/
+quarantine/
+
+# Generated remediation scripts. These are produced by the hardening agent from
+# the control catalogue and describe the specific weaknesses of one machine.
+harden/Apply-Tier*.ps1
+harden/Rollback-Tier*.ps1
+harden/*.log
+harden/apply-*.log
+
+# ---------------------------------------------------------------------------
+# Editors, OS cruft, build output
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+out/
+dist/
+*.zip
+
+# Test scratch
+tests/tmp/
+tests/*.tmp
+TestResults*.xml

@@ -1,0 +1,24 @@
+# Normalise line endings in the repository.
+#
+# PowerShell itself tolerates either, but a CRLF file checked out on Linux
+# breaks anything that shells out with a here-doc or reads a config line by
+# line, and mixed endings make diffs unreadable. LF in the repo, and git can
+# translate on checkout for anyone who wants CRLF locally.
+* text=auto eol=lf
+
+*.ps1   text eol=lf
+*.psm1  text eol=lf
+*.psd1  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.sh    text eol=lf
+
+# Detection fixtures are byte-exact on purpose: the scanner scores entropy and
+# magic bytes, so line-ending translation would change the result.
+tests/samples/** -text
+
+*.png   binary
+*.jpg   binary
+*.gz    binary
+*.zip   binary

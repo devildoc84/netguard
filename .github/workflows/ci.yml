@@ -1,0 +1,120 @@
+name: CI
+
+# The self-test is the gate. It parses every file, loads the module graph,
+# exercises the provider contract, and asserts detection correctness on both
+# platforms. A green run means the thing that matters - detection - still works.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows (PowerShell 5.1)
+            shell: powershell          # the version that actually ships with Windows
+          - os: windows-latest
+            name: Windows (PowerShell 7)
+            shell: pwsh
+          - os: ubuntu-latest
+            name: Linux (PowerShell 7)
+            shell: pwsh
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show environment
+        shell: ${{ matrix.shell }}
+        run: |
+          $PSVersionTable | Format-List
+          Write-Host "OS: $([System.Environment]::OSVersion.VersionString)"
+
+      - name: Run self-test
+        shell: ${{ matrix.shell }}
+        run: ./Test-NetGuard.ps1
+
+      - name: Probe provider (diagnostic on failure)
+        if: failure()
+        shell: ${{ matrix.shell }}
+        run: ./tests/Probe-Provider.ps1
+
+  lint:
+    name: PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -ErrorAction Stop
+
+      - name: Analyse
+        shell: pwsh
+        run: |
+          # Errors fail the build. Warnings are reported but tolerated: several
+          # are unavoidable here (Write-Host is the deliberate UI for the
+          # interactive scripts, and the agents legitimately use global state).
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error,Warning `
+              -ExcludeRule PSAvoidUsingWriteHost,PSUseShouldProcessForStateChangingFunctions,PSAvoidGlobalVars
+
+          $errors = @($results | Where-Object { $_.Severity -eq 'Error' })
+          $warnings = @($results | Where-Object { $_.Severity -eq 'Warning' })
+
+          if ($warnings.Count -gt 0) {
+            Write-Host "::notice::$($warnings.Count) analyzer warning(s)"
+            $warnings | Format-Table RuleName, ScriptName, Line, Message -AutoSize | Out-String | Write-Host
+          }
+          if ($errors.Count -gt 0) {
+            $errors | Format-Table RuleName, ScriptName, Line, Message -AutoSize | Out-String | Write-Host
+            throw "$($errors.Count) analyzer error(s)"
+          }
+          Write-Host "No analyzer errors."
+
+  secrets:
+    name: No secrets committed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for credential material
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail=0
+
+          # Files that must never be committed, whatever .gitignore says.
+          for f in state/secrets.json state/.ngkey config/netguard.config.json config/hub.txt; do
+            if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+              echo "::error::$f is tracked by git and must not be"
+              fail=1
+            fi
+          done
+
+          # Live credential shapes. The example config and docs are excluded so
+          # placeholder text does not trip the check.
+          patterns=(
+            'discord(app)?\.com/api/webhooks/[0-9]{17,}/[A-Za-z0-9_-]{60,}'
+            'sk-ant-[A-Za-z0-9_-]{20,}'
+            'xox[baprs]-[A-Za-z0-9-]{10,}'
+            '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
+          )
+          for p in "${patterns[@]}"; do
+            if git grep -nEI "$p" -- ':!*.example.json' ':!docs/*' ':!*.md' >/dev/null 2>&1; then
+              echo "::error::possible live credential matching /$p/"
+              git grep -nEI "$p" -- ':!*.example.json' ':!docs/*' ':!*.md' || true
+              fail=1
+            fi
+          done
+
+          exit $fail

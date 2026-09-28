@@ -1,0 +1,57 @@
+{
+  "_comment": "Template. Setup-NetGuard.ps1 writes the real config to netguard.config.json, which is gitignored. Secrets (webhook URL, SMTP password, API keys) are NEVER stored here - they live encrypted in state/secrets.json.",
+  "version": 1,
+  "host": "",
+
+  "notify": {
+    "_comment": "Severity floors decide what reaches you. Too low and you mute the channel; too high and you miss things. Discord carries the detail, SMS carries the wake-you-up.",
+    "discordEnabled": true,
+    "discordMinSeverity": "Medium",
+    "discordHourlyCeiling": 12,
+    "smsEnabled": true,
+    "smsMinSeverity": "Critical",
+    "smsHourlyCeiling": 4,
+    "cooldownMinutes": 240,
+    "mentionOnCritical": true,
+    "smtpHost": "smtp.example.com",
+    "smtpPort": 587,
+    "smtpUseSsl": true
+  },
+
+  "ai": {
+    "_comment": "The AI layer explains and prioritises; it never decides whether to alert. Everything keeps working with this disabled.",
+    "enabled": true,
+    "triageMinSeverity": "High",
+    "triageModel": "sonnet",
+    "reportModel": "opus",
+    "monthlyBudgetUsd": 15
+  },
+
+  "scan": {
+    "_comment": "watchPaths is filled in by the setup wizard with your Downloads folder. On Linux use forward slashes, e.g. /home/you/Downloads.",
+    "watchPaths": [],
+    "autoQuarantine": true,
+    "quarantineThreshold": 60,
+    "virusTotalEnabled": false,
+    "uploadToVirusTotal": false,
+    "settleMs": 2500,
+    "maxFileSizeMb": 512
+  },
+
+  "thresholds": {
+    "failedLogonBurst": 10
+  },
+
+  "retention": {
+    "findingsDays": 120,
+    "reportsDays": 365,
+    "evidenceDays": 180
+  },
+
+  "remote": {
+    "_comment": "Hosts to push agents to over WinRM. The collection point is a file share, not a listening service.",
+    "hosts": [],
+    "hubShare": null,
+    "role": "standalone"
+  }
+}
