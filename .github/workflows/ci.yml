@@ -31,22 +31,23 @@ jobs:
             name: Linux (PowerShell 7)
             shell: pwsh
 
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Show environment
-        shell: ${{ matrix.shell }}
         run: |
           $PSVersionTable | Format-List
           Write-Host "OS: $([System.Environment]::OSVersion.VersionString)"
 
       - name: Run self-test
-        shell: ${{ matrix.shell }}
         run: ./Test-NetGuard.ps1
 
       - name: Probe provider (diagnostic on failure)
         if: failure()
-        shell: ${{ matrix.shell }}
         run: ./tests/Probe-Provider.ps1
 
   lint:
